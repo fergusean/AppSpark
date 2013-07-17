@@ -1,6 +1,6 @@
 <?php
 /*
-	AppSpark 20130209
+	AppSpark 20130717
 	A lightweight PHP framework to simplify the development of web applications
 	Copyright (c) 2013 Signal24, Inc.
 */
@@ -273,7 +273,7 @@ class AppSparkDatabase {
 	
 	function load($param = false) {
 		if (!is_array($param)) {
-			@include(APPSPARK_APPDIR . '/config/database.php');
+			include(APPSPARK_APPDIR . '/config/database.php');
 			if ($param)
 				$param = $db[$param];
 			elseif (is_array($db[$default_connection]))
@@ -433,7 +433,7 @@ class AppSparkDatabaseAR {
 		if (!$this->_result)
 			return false;
 		$count = mysql_result($this->_result, 0, 0);
-		return $count;
+		return intval($count);
 	}
 	
 	public function num_rows() {
@@ -442,12 +442,16 @@ class AppSparkDatabaseAR {
 	
 	public function row($row = false) {
 		$row !== false && mysql_data_seek($this->_result, $row);
-		return ife(mysql_fetch_object($this->_result), new stdClass());
+		$row = mysql_fetch_object($this->_result);
+		$row || ($row = new stdClass());
+		return $row;
 	}
 	
 	public function row_array($row = false) {
 		$row !== false && mysql_data_seek($this->_result, $row);
-		return ife(mysql_fetch_assoc($this->_result), array());
+		$row = mysql_fetch_array($this->_result);
+		$row || ($row = array());
+		return $row;
 	}
 	
 	public function result() {
@@ -552,6 +556,10 @@ class AppSparkDatabaseAR {
 	
 	public function unsticky() {
 		unset($this->_sticky);
+	}
+
+	public function last_error() {
+		return mysql_error($this->_db);
 	}
 }
 
@@ -702,14 +710,16 @@ class AppSparkEmail {
 	}
 }
 
-function bail($msg, $code = 500, $httpMsg = 'Internal Server Error') {
+function bail($msg, $code = 500, $httpMsg = false) {
+	if (!$httpMsg) $httpMsg = $msg;
 	header('HTTP/1.1 ' . $code . ' ' . $httpMsg);
 	echo $msg;
 	exit;
 }
 
 function json($data) {
-	echo str_replace(':"false"', ':false', json_encode($data));
+	header('Content-Type: application/json');
+	echo json_encode($data);
 }
 
 function json_success($data = false) {
